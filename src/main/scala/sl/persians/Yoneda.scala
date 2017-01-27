@@ -15,6 +15,11 @@ import shapeless.PolyDefns.~>
   *
   * Looking at type signatures, you'll see that Yoneda
   * as a datatype curries a functor on the right.
+  * This is in line with the proof of the Yoneda lemma
+  * which amounts to showing that liftYoneda and
+  * lowerYoneda really do work, in other words
+  * that values are determined by lifting the identity
+  * across our natural transformation.
   */
 trait Yoneda [F [_], A] {
   def roYo: λ [B => (A => B)] ~> F
@@ -26,6 +31,13 @@ object Yoneda {
       override def apply [T] (f: A => T) = implicitly [Functor [F]].map (fa)(f)
     }
   }
+  def upYo = liftYoneda _
+
   def lowerYoneda [F [_]: Functor, A] (ya: Yoneda [F, A]): F [A] =
     ya roYo identity [A]
+  def loYo = lowerYoneda _
+
+  object instances {
+    // None yet
+  }
 }
