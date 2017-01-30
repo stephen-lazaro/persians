@@ -1,6 +1,7 @@
 package sl.persians
 
 import cats.{Apply, Functor}
+import cats.syntax.apply._
 import shapeless.PolyDefns.~>
 
 /**
@@ -50,10 +51,20 @@ object Yoneda {
           }
         }
     }
+    implicit class functorSyntaxForYoneda [F [_], A] (ya: Yoneda [F, A]) {
+      def map [B] (f: A => B) = stdFunctorForYoneda.map [A, B] (ya)(f)
+    }
 
-    implicit def stdApplyForYoneda [F [_]] = new Apply [Yoneda [F, ?]] {
+    implicit def stdApplyForYoneda [F [_] : Apply] = new Apply [Yoneda [F, ?]] {
       def map [A, B] (fa: Yoneda [F, A])(f: A => B) = stdFunctorForYoneda.map(fa)(f)
-      def ap [A, B] (ff: Yoneda [F, A => B])(fa: Yoneda [F, A]): Yoneda [F, B] = ???
+      def ap [A, B] (ff: Yoneda [F, A => B])(ya: Yoneda [F, A]): Yoneda [F, B] =
+        new Yoneda [F, B] {
+          def roYo = new (λ [C => (B => C)] ~> F) {
+            def apply [T] (k: B => T) =
+              (Yoneda lowerYoneda [F, A => T] (ff map (k compose _))) ap (
+                Yoneda lowerYoneda [F, A] ya)
+          }
+        }
     }
   }
 }
