@@ -1,12 +1,12 @@
-package sl.kaaan
+package sl.persians
 
-import cats.Functor
+import cats.{Apply, Functor}
 import shapeless.PolyDefns.~>
 
 /**
-  * The Yoneda lemma says that for a set valued functor F
-  * from a category with small Hom-sets the values for
-  * an object r in the source category just are
+  * The (covariant) Yoneda lemma says that for a set valued
+  * functor F from a category with small Hom-sets the values
+  * for an object r in the source category just are
   * natural transformations from the Hom(r, -) functor
   * to F(r).
   *
@@ -14,7 +14,8 @@ import shapeless.PolyDefns.~>
   * are in bijection with the values of the functor.
   *
   * Looking at type signatures, you'll see that Yoneda
-  * as a datatype curries a functor on the right.
+  * as a datatype curries a functor's map on the value side.
+  *
   * This is in line with the proof of the Yoneda lemma
   * which amounts to showing that liftYoneda and
   * lowerYoneda really do work, in other words
@@ -27,17 +28,32 @@ trait Yoneda [F [_], A] {
 }
 object Yoneda {
   def liftYoneda [F [_]: Functor, A] (fa: F[A]): Yoneda [F, A] = new Yoneda [F, A] {
-    override def roYo = new (λ [B => (A => B)] ~> F) {
-      override def apply [T] (f: A => T) = implicitly [Functor [F]].map (fa)(f)
+    def roYo = new (λ [B => (A => B)] ~> F) {
+      def apply [T] (f: A => T) = implicitly [Functor [F]].map (fa)(f)
     }
   }
-  def upYo = liftYoneda _
+  def upYo [F [_] : Functor, A] = liftYoneda [F, A] _
+  def yUp  [F [_] : Functor, A] = liftYoneda [F, A] _
 
   def lowerYoneda [F [_]: Functor, A] (ya: Yoneda [F, A]): F [A] =
-    ya roYo identity [A]
-  def loYo = lowerYoneda _
+    ya roYo identity [A] _
+
+  def loYo [F [_] : Functor, A] = lowerYoneda [F, A] _
+  def yoLo [F [_] : Functor, A] = lowerYoneda [F, A] _
 
   object instances {
-    // None yet
+    implicit def stdFunctorForYoneda [F [_]] = new Functor [Yoneda [F, ?]] {
+      def map [A, B] (fa: Yoneda [F, A])(f: A => B) =
+        new Yoneda [F, B] {
+          def roYo = new (λ [C => (B => C)] ~> F) {
+            def apply [T] (k: B => T) = fa roYo (k compose f)
+          }
+        }
+    }
+
+    implicit def stdApplyForYoneda [F [_]] = new Apply [Yoneda [F, ?]] {
+      def map [A, B] (fa: Yoneda [F, A])(f: A => B) = stdFunctorForYoneda.map(fa)(f)
+      def ap [A, B] (ff: Yoneda [F, A => B])(fa: Yoneda [F, A]): Yoneda [F, B] = ???
+    }
   }
 }

@@ -1,4 +1,4 @@
-name := "kaaan"
+name := "persians"
 
 version := "1.0"
 
