@@ -16,6 +16,7 @@ import shapeless.PolyDefns.~>
   *
   * Looking at type signatures, you'll see that Yoneda
   * as a datatype curries a functor's map on the value side.
+  * This insight shamelessly stolen from the ekmett's docs.
   *
   * This is in line with the proof of the Yoneda lemma
   * which amounts to showing that liftYoneda and
