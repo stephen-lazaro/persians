@@ -30,17 +30,17 @@ trait Yoneda [F [_], A] {
 object Yoneda {
   def liftYoneda [F [_]: Functor, A] (fa: F[A]): Yoneda [F, A] = new Yoneda [F, A] {
     def roYo = new (λ [B => (A => B)] ~> F) {
-      def apply [T] (f: A => T) = implicitly [Functor [F]].map (fa)(f)
+      def apply [T] (f: A => T) = implicitly [Functor [F]] .map (fa)(f)
     }
   }
-  def upYo [F [_] : Functor, A] = liftYoneda [F, A] _
-  def yUp  [F [_] : Functor, A] = liftYoneda [F, A] _
+  def upYo [F [_] : Functor, A] (fa: F [A]) = liftYoneda [F, A] (fa)
+  def yUp  [F [_] : Functor, A] (fa: F [A]) = liftYoneda [F, A] (fa)
 
   def lowerYoneda [F [_]: Functor, A] (ya: Yoneda [F, A]): F [A] =
     ya roYo identity [A] _
-
-  def loYo [F [_] : Functor, A] = lowerYoneda [F, A] _
-  def yoLo [F [_] : Functor, A] = lowerYoneda [F, A] _
+  // Apparently this can't be eta reduced, though I am not sure why
+  def loYo [F [_] : Functor, A] (ya: Yoneda [F, A]) = lowerYoneda [F, A] (ya)
+  def yoLo [F [_] : Functor, A] (ya: Yoneda [F, A]) = lowerYoneda [F, A] (ya)
 
   object instances {
     implicit def stdFunctorForYoneda [F [_]] = new Functor [Yoneda [F, ?]] {
@@ -61,8 +61,8 @@ object Yoneda {
         new Yoneda [F, B] {
           def roYo = new (λ [C => (B => C)] ~> F) {
             def apply [T] (k: B => T) =
-              (Yoneda lowerYoneda [F, A => T] (ff map (k compose _))) ap (
-                Yoneda lowerYoneda [F, A] ya)
+              (Yoneda loYo [F, A => T] (ff map (k compose _))) ap (
+                Yoneda loYo [F, A] ya)
           }
         }
     }
