@@ -23,5 +23,7 @@ resolvers ++= Seq(
 
 libraryDependencies ++= Seq (
   "org.typelevel" %% "cats" % "0.9.0",
-  "com.chuusai" %% "shapeless" % "2.3.2"
+  "com.chuusai" %% "shapeless" % "2.3.2",
+  "org.typelevel" %% "discipline" % "0.7.3",
+  "org.scalatest" %% "scalatest" % "3.0.1"
 )

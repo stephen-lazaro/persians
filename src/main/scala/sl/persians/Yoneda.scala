@@ -30,6 +30,13 @@ trait Yoneda [F [_], A] {
   def run = roYo
 }
 object Yoneda {
+  /**
+    * liftYoneda and lowerYoneda are the critical morphisms exhibiting Yoneda's lemma
+    * Yoneda's lemma says:
+    *   liftYoneda compose lowerYoneda = Y [F, _] ~> Y [F, _] identity nat transform
+    *   lowerYoneda compose liftYoneda = F ~> F identity nat transform
+    * where F : Functor, i.e. F is a functor.
+    */
   def liftYoneda [F [_]: Functor, A] (fa: F[A]): Yoneda [F, A] = new Yoneda [F, A] {
     def roYo = new (λ [B => (A => B)] ~> F) {
       def apply [T] (f: A => T) = implicitly [Functor [F]] .map (fa)(f)
@@ -38,6 +45,7 @@ object Yoneda {
   // Apparently Scala wont' let these can't be eta reduced, though I am not sure why
   def upYo [F [_] : Functor, A] (fa: F [A]) = liftYoneda [F, A] (fa)
   def yUp  [F [_] : Functor, A] (fa: F [A]) = liftYoneda [F, A] (fa)
+  def liYo [F [_] : Functor, A] (fa: F [A]) = liftYoneda [F, A] (fa)
 
   def lowerYoneda [F [_], A] (ya: Yoneda [F, A]): F [A] =
     ya roYo identity [A] _
