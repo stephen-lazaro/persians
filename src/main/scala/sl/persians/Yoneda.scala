@@ -5,6 +5,7 @@ import cats.syntax.apply._
 import cats.syntax.flatMap._
 import shapeless.PolyDefns.~>
 
+
 /**
   * The (covariant) Yoneda lemma says that for a set valued
   * functor F from a category with small Hom-sets the values
@@ -84,9 +85,13 @@ object Yoneda {
 
     implicit def persiansStdMonadForYoneda [F [_] : Monad] = new Monad [Yoneda [F, ?]] {
       def pure [A] (a: A) = persiansStdApplicativeForYoneda pure a
+
       def flatMap [A, B] (ya: Yoneda [F, A])(yf: A => Yoneda [F, B]) =
-        Yoneda upYo ((Yoneda loYo ya) flatMap ((Yoneda loYo [F, B] _) compose yf))
-      def tailRecM [A, B] (a: A)(f: A => Yoneda [F, Either [A, B]]) = ???
+        Yoneda upYo ((Yoneda loYo ya) flatMap ((Yoneda loYo[F, B] _) compose yf))
+
+      // Assumes F has a stacksafe Monad implemented.
+      def tailRecM [A, B] (a: A)(f: A => Yoneda[F, Either [A, B]]): Yoneda[F, B] =
+        Yoneda.upYo (implicitly [Monad[F]] .tailRecM (a)(f andThen Yoneda.loYo))
     }
   }
 
@@ -125,12 +130,18 @@ object Yoneda {
     implicit o: Ordering [F [A]]): Yoneda [F, A] =
       Yoneda upYo (o min (Yoneda loYo ya, Yoneda loYo yb))
 
-  def maxM [M [_] : Monad, A : Ordering] (ya: Yoneda [M, A])(yb: Yoneda [M, A]) = {
+  def maxM  [F [_] : Monad, A] (ya: Yoneda [F, A])(yb: Yoneda [F, A])(
+    implicit o: Ordering [F [A]]): Yoneda [F, A] = maxF [F, A] (ya)(yb)
+
+  def minM  [F [_] : Monad, A] (ya: Yoneda [F, A])(yb: Yoneda [F, A])(
+    implicit o: Ordering [F [A]]): Yoneda [F, A] = minF [F, A] (ya)(yb)
+
+  def maxMlifted [M [_] : Monad, A : Ordering] (ya: Yoneda [M, A])(yb: Yoneda [M, A]) = {
     import syntax.monadSyntaxForYoneda
     ya flatMap [A] (a => yb map [A] (b => implicitly [Ordering [A]] max (a, b)))
   }
 
-  def minM [M [_] : Monad, A : Ordering] (ya: Yoneda [M, A])(yb: Yoneda [M, A]) = {
+  def minMlifted [M [_] : Monad, A : Ordering] (ya: Yoneda [M, A])(yb: Yoneda [M, A]) = {
     import syntax.monadSyntaxForYoneda
     ya flatMap [A] (a => yb map [A] (b => implicitly [Ordering [A]] min (a, b)))
   }
