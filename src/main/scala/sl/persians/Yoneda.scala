@@ -1,7 +1,8 @@
 package sl.persians
 
-import cats.{Applicative, Apply, Functor}
+import cats.{Applicative, Apply, Functor, Monad}
 import cats.syntax.apply._
+import cats.syntax.flatMap._
 import shapeless.PolyDefns.~>
 
 /**
@@ -34,12 +35,13 @@ object Yoneda {
       def apply [T] (f: A => T) = implicitly [Functor [F]] .map (fa)(f)
     }
   }
+  // Apparently Scala wont' let these can't be eta reduced, though I am not sure why
   def upYo [F [_] : Functor, A] (fa: F [A]) = liftYoneda [F, A] (fa)
   def yUp  [F [_] : Functor, A] (fa: F [A]) = liftYoneda [F, A] (fa)
 
   def lowerYoneda [F [_], A] (ya: Yoneda [F, A]): F [A] =
     ya roYo identity [A] _
-  // Apparently this can't be eta reduced, though I am not sure why
+  // Apparently Scala wont' let these can't be eta reduced, though I am not sure why
   def loYo [F [_], A] (ya: Yoneda [F, A]) = lowerYoneda [F, A] (ya)
   def yoLo [F [_], A] (ya: Yoneda [F, A]) = lowerYoneda [F, A] (ya)
 
@@ -71,6 +73,13 @@ object Yoneda {
       def ap [A, B] (yf: Yoneda [F, A => B])(ya: Yoneda [F, A]): Yoneda [F, B] = ya ap yf
       def pure [A] (a: A) = Yoneda upYo (implicitly [Applicative [F]] pure a)
     }
+
+    implicit def persiansStdMonadForYoneda [F [_] : Monad] = new Monad [Yoneda [F, ?]] {
+      def pure [A] (a: A) = persiansStdApplicativeForYoneda pure a
+      def flatMap [A, B] (ya: Yoneda [F, A])(yf: A => Yoneda [F, B]) =
+        Yoneda upYo ((Yoneda loYo ya) flatMap ((Yoneda loYo [F, B] _) compose yf))
+      def tailRecM [A, B] (a: A)(f: A => Yoneda [F, Either [A, B]]) = ???
+    }
   }
 
   object syntax {
@@ -88,6 +97,34 @@ object Yoneda {
     implicit class applicativeSyntaxForYoneda [F [_] : Applicative, A] (ya: Yoneda [F, A]) {
       import instances.persiansStdApplicativeForYoneda
       def ap [B] (yf: Yoneda [F, A => B]) = persiansStdApplicativeForYoneda [F] .ap [A, B] (yf)(ya)
+      def pure (a: A) = persiansStdApplicativeForYoneda [F] pure a
+      def map [B] (f: A => B) = persiansStdApplicativeForYoneda [F] .map (ya)(f)
+    }
+
+    implicit class monadSyntaxForYoneda [F [_] : Monad, A] (ya: Yoneda [F, A]) {
+      import instances.persiansStdMonadForYoneda
+      def pure (a: A) = persiansStdMonadForYoneda [F] pure a
+      def map [B] (f: A => B) = persiansStdMonadForYoneda [F] .map (ya)(f)
+      def flatMap [B] (f: A => Yoneda [F, B]) = persiansStdMonadForYoneda [F] .flatMap [A, B] (ya)(f)
     }
   }
+
+  def maxF  [F [_] : Functor, A] (ya: Yoneda [F, A])(yb: Yoneda [F, A])(
+    implicit o: Ordering [F [A]]): Yoneda [F, A] =
+      Yoneda upYo (o max (Yoneda loYo ya, Yoneda loYo yb))
+
+  def minF [F [_] : Functor, A] (ya: Yoneda [F, A])(yb: Yoneda [F, A])(
+    implicit o: Ordering [F [A]]): Yoneda [F, A] =
+      Yoneda upYo (o min (Yoneda loYo ya, Yoneda loYo yb))
+
+  def maxM [M [_] : Monad, A : Ordering] (ya: Yoneda [M, A])(yb: Yoneda [M, A]) = {
+    import syntax.monadSyntaxForYoneda
+    ya flatMap [A] (a => yb map [A] (b => implicitly [Ordering [A]] max (a, b)))
+  }
+
+  def minM [M [_] : Monad, A : Ordering] (ya: Yoneda [M, A])(yb: Yoneda [M, A]) = {
+    import syntax.monadSyntaxForYoneda
+    ya flatMap [A] (a => yb map [A] (b => implicitly [Ordering [A]] min (a, b)))
+  }
+
 }
