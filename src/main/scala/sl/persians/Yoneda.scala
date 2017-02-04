@@ -1,6 +1,6 @@
 package sl.persians
 
-import cats.{Applicative, Apply, Functor, Monad}
+import cats.{Applicative, Apply, Functor, FlatMap, Monad}
 import cats.syntax.apply._
 import cats.syntax.flatMap._
 import shapeless.PolyDefns.~>
@@ -81,6 +81,17 @@ object Yoneda {
       import syntax.applySyntaxForYoneda
       def ap [A, B] (yf: Yoneda [F, A => B])(ya: Yoneda [F, A]): Yoneda [F, B] = ya ap yf
       def pure [A] (a: A) = Yoneda upYo (implicitly [Applicative [F]] pure a)
+    }
+
+    implicit def persiansStdFlatMapForYoneda [F [_] : FlatMap] = new FlatMap [Yoneda [F, ?]] {
+      def flatMap [A, B] (ya: Yoneda [F, A])(yf: A => Yoneda [F, B]) =
+        Yoneda upYo ((Yoneda loYo ya) flatMap ((Yoneda loYo[F, B] _) compose yf))
+
+      def map [A, B] (ya: Yoneda [F, A])(f: A => B) = persiansStdFunctorForYoneda .map (ya) (f)
+
+      // Assumes F has a stacksafe Monad implemented.
+      def tailRecM [A, B] (a: A)(f: A => Yoneda[F, Either [A, B]]): Yoneda[F, B] =
+        Yoneda.upYo (implicitly [FlatMap[F]] .tailRecM (a)(f andThen Yoneda.loYo))
     }
 
     implicit def persiansStdMonadForYoneda [F [_] : Monad] = new Monad [Yoneda [F, ?]] {
