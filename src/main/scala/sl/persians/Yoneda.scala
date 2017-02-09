@@ -142,10 +142,12 @@ object Yoneda {
       Yoneda upYo (o min (Yoneda loYo ya, Yoneda loYo yb))
 
   def maxM  [F [_] : Monad, A] (ya: Yoneda [F, A])(yb: Yoneda [F, A])(
-    implicit o: Ordering [F [A]]): Yoneda [F, A] = maxF [F, A] (ya)(yb)
+    implicit o: Ordering [F [A]]): Yoneda [F, A] =
+      maxF [F, A] (ya)(yb)
 
   def minM  [F [_] : Monad, A] (ya: Yoneda [F, A])(yb: Yoneda [F, A])(
-    implicit o: Ordering [F [A]]): Yoneda [F, A] = minF [F, A] (ya)(yb)
+    implicit o: Ordering [F [A]]): Yoneda [F, A] =
+      minF [F, A] (ya)(yb)
 
   def maxMlifted [M [_] : Monad, A : Ordering] (ya: Yoneda [M, A])(yb: Yoneda [M, A]) = {
     import syntax.monadSyntaxForYoneda
