@@ -8,11 +8,13 @@ scalacOptions ++= Seq (
   "-Xfatal-warnings",
   "-Xfuture",
   "-Xlint",
+  "-Ypartial-unification",
   "-Ywarn-unused-import",
   "-deprecation",
   "-encoding", "UTF-8",
   "-feature",
-  "-language:higherKinds")
+  "-language:higherKinds",
+  "-language:existentials")
 
 addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3")
 
