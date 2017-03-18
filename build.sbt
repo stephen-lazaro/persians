@@ -13,8 +13,7 @@ scalacOptions ++= Seq (
   "-deprecation",
   "-encoding", "UTF-8",
   "-feature",
-  "-language:higherKinds",
-  "-language:existentials")
+  "-language:higherKinds")
 
 addCompilerPlugin("org.spire-math" %% "kind-projector" % "0.9.3")
 
