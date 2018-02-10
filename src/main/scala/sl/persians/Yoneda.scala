@@ -1,9 +1,8 @@
 package sl.persians
 
-import cats.{Applicative, Apply, Functor, FlatMap, Monad, Show}
+import cats.{~>, Applicative, Apply, Functor, FlatMap, Monad, Show}
 import cats.syntax.apply._
 import cats.syntax.flatMap._
-import shapeless.PolyDefns.~>
 
 
 /**
@@ -25,6 +24,11 @@ import shapeless.PolyDefns.~>
   * lowerYoneda really do work, in other words
   * that values are determined by lifting the identity
   * across each given natural transformation.
+  *
+  * Note the duality with Coyoneda.
+  * There we took functions INTO A.
+  * Here we take functions OUT of A.
+  * Hence, here we postcompose in the functor.
   */
 trait Yoneda [F [_], A] {
   def roYo: λ [B => (A => B)] ~> F

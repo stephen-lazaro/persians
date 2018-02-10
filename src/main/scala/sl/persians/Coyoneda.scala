@@ -12,6 +12,10 @@ import cats.Functor
  * In other words, we are accumulating over the functions
  * to be mapped by fmap by restricting composition so that
  * it is a semigroup rather than a category.
+ *
+ * Note the duality with Yoneda, here we take functions INTO A.
+ * There we took functions FROM A.
+ * Hence, here we precompose in the functor.
  */
 trait Coyoneda [F [_], A] {
   type Relevant
