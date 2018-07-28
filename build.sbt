@@ -23,7 +23,5 @@ resolvers ++= Seq(
 )
 
 libraryDependencies ++= Seq (
-  "com.chuusai" %% "shapeless" % "2.3.2",
-  "org.scala-lang" % "scala-reflect" % scalaVersion.value % "provided",
   "org.typelevel" %% "cats-core" % "1.2.0"
 )
