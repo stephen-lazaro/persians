@@ -2,7 +2,7 @@ name := "persians"
 
 version := "1.0"
 
-scalaVersion := "2.12.1"
+scalaVersion := "2.12.5"
 
 scalacOptions ++= Seq (
   "-Xfatal-warnings",
@@ -25,8 +25,5 @@ resolvers ++= Seq(
 libraryDependencies ++= Seq (
   "com.chuusai" %% "shapeless" % "2.3.2",
   "org.scala-lang" % "scala-reflect" % scalaVersion.value % "provided",
-  "org.typelevel" %% "cats" % "0.9.0",
-  "org.typelevel" %% "discipline" % "0.7.3",
-  "org.typelevel" %% "kittens" % "1.0.0-M8",
-  "org.scalatest" %% "scalatest" % "3.0.1"
+  "org.typelevel" %% "cats-core" % "1.2.0"
 )
