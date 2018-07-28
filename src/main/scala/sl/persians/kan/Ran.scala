@@ -14,6 +14,8 @@ object Ran {
   def fromRan [F[_], G[_], H[_], B](trans: F ~> Ran[G, H, ?])(fgb: F[G[B]]): H[B] =
     trans.apply[G[B]](fgb).run(identity[G[B]])
 
+  def undo [G[_], H[_], A](ran: Ran[G, H, G[A]]): H[A] = ran.run[A](identity[G[A]])
+
   implicit def functorForRan[G[_], H[_]]: Functor[Ran[G, H, ?]] =
     new Functor[Ran[G, H, ?]] {
       def map[A, B](fa: Ran[G, H, A])(f: A => B): Ran[G, H, B] =
