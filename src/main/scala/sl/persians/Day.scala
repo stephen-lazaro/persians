@@ -1,6 +1,6 @@
 package sl.persians
 
-import cats.{Applicative, Functor, Id, ~>}
+import cats.{Applicative, Apply, Functor, Id, ~>}
 
 trait Day[F[_], G[_], A] {
   type B
@@ -25,9 +25,9 @@ object Day {
     }
 
   // Leverage applicative context to collapse values
-  def collapse[F[_]: Applicative, A](day: Day[F, F, A]): F[A] =
+  def collapse[F[_]: Apply, A](day: Day[F, F, A]): F[A] =
     day.run match {
-      case (fa, fc, combine) => Applicative[F].map2(fa, fc)(combine)
+      case (fa, fc, combine) => Apply[F].map2(fa, fc)(combine)
     }
 
   // Ughhhhh beta reducing this reasonably is gonna be a hassle.
@@ -82,6 +82,16 @@ object Day {
       case (fb, c, op) => Functor[F].map(fb)((b: dayfa.B) => op(b, c))
     }
 
+  def swap[F[_], G[_], A](day: Day[F, G, A]): Day[G, F, A] =
+    new Day[G, F, A] {
+      type B = day.C
+      type C = day.B
+      def run: (G[B], F[C], (B, C) => A) = day.run match {
+        case (fc, gb, op) =>
+          (gb, fc, (x: B, y: C) => op(y, x))
+      }
+    }
+
   def toCurried[F[_], G[_], H[_], A](trans: Day[F, G, ?] ~> H)(ga: G[A]): Curried[F, H, A] =
     new Curried[F, H, A] {
       def run[R](gar: F[A => R]): H[R] =
@@ -118,5 +128,38 @@ object Day {
             fa.run(Functor[G].map(gar)(_.compose(f)))
         }
     }
+
+    def applied[F[_]: Functor, G[_], A](dayCurried: Day[F, Curried[F, G, ?], A]): G[A] =
+      dayCurried.run match {
+        case (fa, curried, op) =>
+          curried.run(Functor[F].map(fa)((b: dayCurried.B) => op(b, _)))
+      }
+
+    def unapplied[F[_], G[_], A](ga: G[A]): Curried[F, Day[F, G, ?], A] = new Curried[F, Day[F, G, ?], A] {
+      def run[R](far: F[A => R]): Day[F, G, R] = new Day[F, G, R] {
+        type B = A => R
+        type C = A
+        def run: (F[B], G[C], (B, C) => R) = (far, ga, _.apply(_))
+      }
+    }
+
+    def liftCurried[F[_]: Apply, A](fa: F[A]): Curried[F, F, A] =
+      new Curried[F, F, A] {
+        def run[R](far: F[A => R]): F[R] = Apply[F].ap(far)(fa)
+      }
+
+    def lowerCurried[F[_]: Applicative, A](fa: Curried[F, F, A]): F[A] =
+      fa.run(Applicative[F].pure(identity[A]))
+
+    def composeOuter[F[_]: Functor, G[_], H[_], A, B](curriedfgab: Curried[F, G, A => B])(curriedgha: Curried[G, H, A]): Curried[F, H, B] =
+      new Curried[F, H, B] {
+        def run[R](far: F[B => R]): H[R] =
+          curriedgha.run(
+            // G[A => R]
+            curriedfgab.run(
+              Functor[F].map(far)((f: B => R) => (g: A => B) => f.compose(g))
+            )
+          )
+      }
   }
 }
