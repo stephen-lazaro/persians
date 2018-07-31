@@ -2,6 +2,8 @@ package sl.persians.kan
 
 import cats.{~>, Functor}
 
+import sl.persians.Density
+
 trait Lan [G [_], H [_], A] {
   type B
   def run: (G[B] => A, H[B])
@@ -30,5 +32,11 @@ object Lan {
             case (g, ha) => (g andThen f, ha)
           }
         }
+    }
+
+  def toDensity[F[_], A](lan: Lan[F, F, A]): Density[F, A] =
+    new Density[F, A] {
+      type B = lan.B
+      def run: (F[B] => A, F[B]) = lan.run
     }
 }
