@@ -1,6 +1,6 @@
 package sl.persians
 
-import cats.{Applicative, Apply, Comonad}
+import cats.{Applicative, Apply, Comonad, Functor}
 import cats.instances.function.catsStdInstancesForFunction1
 import cats.syntax.arrow.toArrowOps
 import cats.syntax.profunctor.toProfunctorOps
@@ -12,8 +12,29 @@ trait Density[K[_], A] {
   def run: (K[B] => A, K[B])
 }
 object Density {
-  implicit def comonadForDensity[F[_]]: Comonad[Density[F, ?]] = new Comonad[Density[F, ?]] {
-    // FIXME: deduplicate
+  def liftToDensity[F[_]: Comonad, A](fa: F[A]): Density[F, A] =
+    new Density[F, A] {
+      type B = A
+      def run: (F[B] => A, F[B]) = (Comonad[F].extract, fa)
+    }
+
+  def toLan[F[_], A](density: Density[F, A]): Lan[F, F, A] =
+    new Lan[F, F, A] {
+      type B = density.B
+      def run: (F[B] => A, F[B]) = density.run
+    }
+
+  implicit def comonadForDensity[F[_]]: Comonad[Density[F, ?]] = new ComonadForDensity[F] {}
+
+  implicit def applyForDensity[F[_]: Apply]: Apply[Density[F, ?]] = new ApplyForDensity[F] {
+    val F = Apply[F]
+  }
+
+  implicit def applicativeForDensity[F[_]: Applicative]: Applicative[Density[F, ?]] = new ApplicativeForDensity[F] {
+    val F = Applicative[F]
+  }
+
+  trait FunctorForDensity[F[_]] extends Functor[Density[F, ?]] {
     def map[A, BB](fa: Density[F, A])(f: A => BB): Density[F, BB] =
       new Density[F, BB] {
         type B = fa.B
@@ -22,7 +43,9 @@ object Density {
             (g andThen f, fb)
         }
       }
+  }
 
+  trait ComonadForDensity[F[_]] extends Comonad[Density[F, ?]] with FunctorForDensity[F] {
     def extract[A](x: Density[F, A]): A = x.run match {
       case (g, fb) => g(fb)
     }
@@ -43,27 +66,8 @@ object Density {
       }
   }
 
-  implicit def applyForDensity[F[_]: Apply]: Apply[Density[F, ?]] = new ApplyForDensity[F] {
-    val F = Apply[F]
-  }
-
-  implicit def applicativeForDensity[F[_]: Applicative]: Applicative[Density[F, ?]] = new ApplicativeForDensity[F] {
-    val F = Applicative[F]
-  }
-
-  trait ApplyForDensity[F[_]] extends Apply[Density[F, ?]] {
+  trait ApplyForDensity[F[_]] extends Apply[Density[F, ?]] with FunctorForDensity[F] {
     val F: Apply[F]
-
-    // FIXME: deduplicate
-    def map[A, BB] (fa: Density[F, A])(f: A => BB): Density[F, BB] =
-      new Density[F, BB] {
-        type B = fa.B
-
-        def run: (F[B] => BB, F[B]) = fa.run match {
-          case (g, fb) =>
-            (g andThen f, fb)
-        }
-      }
 
     def ap[A, BB](dffa: Density[F, A => BB])(dfa: Density[F, A]): Density[F, BB] =
       new Density[F, BB] {
@@ -73,9 +77,13 @@ object Density {
           // ((F[B] => A, F[B]), (F[B] => (A => BB), F[B])
           case ((fb_a, fb), (fb_a_bb, fb_otro)) =>
             val inner: F[B] => BB =
-              (F.lift [B, dfa.B](_._1) &&& F.lift (_._2)) rmap
-              (((fbl: F[dfa.B]) => fb_a (fbl)) ***
-              ((fbr: F[dffa.B]) => fb_a_bb (fbr))) rmap { case (a, a_to_bb) => a_to_bb (a) }
+              (F.lift[B, dfa.B](_._1) &&& F.lift (_._2)
+                ) rmap
+                (((fbl: F[dfa.B]) => fb_a(fbl)) ***
+                 ((fbr: F[dffa.B]) => fb_a_bb(fbr))
+                ) rmap {
+                  case (a, a_to_bb) => a_to_bb(a)
+                }
             (inner, F.product (fb, fb_otro))
         }
       }
@@ -88,16 +96,4 @@ object Density {
       def run: (G[B] => A, G[A]) = (Function.const(x), F.pure(x))
     }
   }
-
-  def liftToDensity[F[_]: Comonad, A](fa: F[A]): Density[F, A] =
-    new Density[F, A] {
-      type B = A
-      def run: (F[B] => A, F[B]) = (Comonad[F].extract, fa)
-    }
-
-  def toLan[F[_], A](density: Density[F, A]): Lan[F, F, A] =
-    new Lan[F, F, A] {
-      type B = density.B
-      def run: (F[B] => A, F[B]) = density.run
-    }
 }

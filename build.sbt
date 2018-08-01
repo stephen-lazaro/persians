@@ -24,5 +24,6 @@ resolvers ++= Seq(
 
 libraryDependencies ++= Seq (
   "org.typelevel" %% "cats-core" % "1.2.0",
-  "org.typelevel" %% "cats-effect" % "1.0.0-RC2"
+  "org.typelevel" %% "cats-effect" % "1.0.0-RC2",
+  "org.typelevel" %% "cats-free" % "1.2.0"
 )

@@ -2,6 +2,8 @@ package sl.persians.kan
 
 import cats.{~>, Functor}
 
+import sl.persians.Codensity
+
 trait Ran [G [_], H [_], A] {
   def run [B] (given: A => G [B]): H [B]
 }
@@ -15,6 +17,11 @@ object Ran {
     trans.apply[G[B]](fgb).run(identity[G[B]])
 
   def undo [G[_], H[_], A](ran: Ran[G, H, G[A]]): H[A] = ran.run[A](identity[G[A]])
+
+  def toCodensity[G[_], A](ran: Ran[G, G, A]): Codensity[G, A] =
+    new Codensity[G, A] {
+      def run[B](given: A => G[B]): G[B] = ran.run(given)
+    }
 
   implicit def functorForRan[G[_], H[_]]: Functor[Ran[G, H, ?]] =
     new Functor[Ran[G, H, ?]] {
