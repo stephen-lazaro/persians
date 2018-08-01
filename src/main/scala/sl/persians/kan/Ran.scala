@@ -1,6 +1,7 @@
 package sl.persians.kan
 
 import cats.{~>, Functor}
+import cats.effect.{IO, LiftIO}
 
 import sl.persians.Codensity
 
@@ -17,6 +18,11 @@ object Ran {
     trans.apply[G[B]](fgb).run(identity[G[B]])
 
   def undo [G[_], H[_], A](ran: Ran[G, H, G[A]]): H[A] = ran.run[A](identity[G[A]])
+
+  def fromLiftIO[G[_]: LiftIO, A](a: A): Ran[IO, G, A] =
+    new Ran[IO, G, A] {
+      def run[B](given: A => IO[B]): G[B] = LiftIO[G].liftIO(given(a))
+  }
 
   def toCodensity[G[_], A](ran: Ran[G, G, A]): Codensity[G, A] =
     new Codensity[G, A] {

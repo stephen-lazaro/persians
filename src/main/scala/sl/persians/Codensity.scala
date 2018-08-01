@@ -29,7 +29,8 @@ object Codensity {
     _bracket: Bracket[M, E]
   ): Resource[M, A] =
     // Treat the codensity as _supplying_ a resource,
-    // to be released trivially.
+    // to be released trivially, as codensity
+    // isn't tracking finalization.
     Resource.make(
       codensity.run(Bracket[M, E].pure))(
       Function.const(Bracket[M, E].unit))
@@ -103,7 +104,7 @@ object Codensity {
     val F: Monad[F]
     def liftIO[A](ioa: IO[A]): Codensity[F, A] =
       new Codensity[F, A] {
-        def run[B](f: A => F[B]) = F.flatten(L.liftIO(ioa.map(f)))
+        def run[B](f: A => F[B]) = F.flatMap(L.liftIO(ioa))(f)
       }
   }
 
