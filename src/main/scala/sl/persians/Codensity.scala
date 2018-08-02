@@ -89,15 +89,6 @@ object Codensity {
         def run[B](f: BB => F[B]): F[B] = fa.run((x: A) => ff(x).run(f))
       }
 
-    // Is this even possible?
-    // You would need an Applicative constraint possibly
-    // Quite a reduction in utility unfortunately.
-    // But if the trade off is being stack unsafe vs
-    // having a less applicable instance...
-    // maybe we just provide both, and prioritize
-    // the safe one?
-    // Wow! I don't think this is possible!
-    // AHA I FUCKING GOT YOU
     def tailRecM[A, BB](a: A)(f: A => Codensity[F, Either[A, BB]]): Codensity[F, BB] =
       new Codensity[F, BB] {
         def run[B](h: BB => F[B]): F[B] =
