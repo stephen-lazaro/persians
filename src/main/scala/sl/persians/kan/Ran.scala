@@ -6,10 +6,10 @@ import cats.effect.{IO, LiftIO}
 import sl.persians.Codensity
 
 trait Ran [G [_], H [_], A] {
-  def run [B] (given: A => G [B]): H [B]
+  def run[B](given: A => G [B]): H [B]
 }
 object Ran {
-  def toRan [F [_]: Functor, G [_], H [_], B] (trans: λ[A => F [G [A]]] ~> H)(fb: F[B]): Ran[G, H, B] =
+  def toRan[F[_]: Functor, G[_], H[_], B](trans: λ[A => F [G [A]]] ~> H)(fb: F[B]): Ran[G, H, B] =
     new Ran [G, H, B] {
       def run [C] (given: B => G[C]): H[C] = trans.apply[C](Functor[F].map(fb)(given))
     }
@@ -23,6 +23,16 @@ object Ran {
     new Ran[IO, G, A] {
       def run[B](given: A => IO[B]): G[B] = LiftIO[G].liftIO(given(a))
   }
+
+  def asOption[E, A](a: A): Ran[Either[E, ?], Option, A] =
+    new Ran[Either[E, ?], Option, A] {
+      def run[B](given: A => Either[E, B]): Option[B] = given(a).toOption
+    }
+
+  def trivial[F[_], A](a: A): Ran[F, F, A] =
+    new Ran[F, F, A] {
+      def run[B](given: A => F[B]): F[B] = given(a)
+    }
 
   def toCodensity[G[_], A](ran: Ran[G, G, A]): Codensity[G, A] =
     new Codensity[G, A] {
