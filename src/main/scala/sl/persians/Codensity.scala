@@ -96,7 +96,16 @@ object Codensity {
     // having a less applicable instance...
     // maybe we just provide both, and prioritize
     // the safe one?
-    def tailRecM[A, B](a: A)(f: A => Codensity[F, Either[A, B]]): Codensity[F, B] = ???
+    // Wow! I don't think this is possible!
+    // AHA I FUCKING GOT YOU
+    def tailRecM[A, BB](a: A)(f: A => Codensity[F, Either[A, BB]]): Codensity[F, BB] =
+      new Codensity[F, BB] {
+        def run[B](h: BB => F[B]): F[B] =
+          f(a).run((e: Either[A, BB]) => e match {
+            case Right(b) => h(b)
+            case Left(a_) => tailRecM(a)(f).run(h)
+          })
+      }
   }
 
   trait LiftIOForCodensity[F[_]] extends MonadForCodensity[F] with LiftIO[Codensity[F, ?]] {
@@ -126,9 +135,15 @@ trait Implicits extends Low {
     new AlternativeForCodensity[F] {
       val F = Alternative[F]
     }
+
+  implicit def liftIoForCodensity[F[_]: Monad: LiftIO]: LiftIO[Codensity[F, ?]] =
+    new LiftIOForCodensity[F] {
+      val L = LiftIO[F]
+      val F = Monad[F]
+    }
 }
 trait Low {
   import Codensity._
-  implicit def monadForCodensity[F[_]]: Monad[Codensity[F, ?]] =
+  implicit def monadForCodensity[F[_]: Applicative]: Monad[Codensity[F, ?]] =
     new MonadForCodensity[F] {}
 }
