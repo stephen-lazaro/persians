@@ -8,6 +8,8 @@ import sl.persians.Density
 trait Lan [G [_], H [_], A] {
   type B
   def run: (G[B] => A, H[B])
+  def fi: H[B] = run._2
+  def k: G[B] => A = run._1
 }
 object Lan {
   def toLan [F [_]: Functor, H [_], G [_], B] (trans: H ~> λ[A => F [G [A]]])(lgh: Lan[G, H, B]): F[B] =
@@ -24,14 +26,13 @@ object Lan {
   def fromLan [F[_], G[_], H[_], B] (trans: Lan[G, H, ?] ~> F)(hb: H[B]): F[G[B]] = trans.apply[G[B]](Lan.apply[G, H, B](hb))
 
   def toCoyoneda[F[_], A](lan: Lan[Id, F, A]): Coyoneda[F, A] =
-    Coyoneda.apply[F, lan.B, A](lan.run._2)(lan.run._1)
+    Coyoneda.apply[F, lan.B, A](lan.fi)(lan.k)
 
   def fromCoyoneda[F[_], A](coyoneda: Coyoneda[F, A]): Lan[Id, F, A] =
     new Lan[Id, F, A] {
       type B = coyoneda.Pivot
       def run = (coyoneda.k, coyoneda.fi)
     }
-
 
   implicit def functorLan[F[_], G[_]]: Functor[Lan[F, G, ?]] =
     new Functor[Lan[F, G, ?]] {
