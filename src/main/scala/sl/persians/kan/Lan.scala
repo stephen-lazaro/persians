@@ -1,6 +1,7 @@
 package sl.persians.kan
 
-import cats.{~>, Functor}
+import cats.{~>, Functor, Id}
+import cats.free.Coyoneda
 
 import sl.persians.Density
 
@@ -21,6 +22,16 @@ object Lan {
   }
 
   def fromLan [F[_], G[_], H[_], B] (trans: Lan[G, H, ?] ~> F)(hb: H[B]): F[G[B]] = trans.apply[G[B]](Lan.apply[G, H, B](hb))
+
+  def toCoyoneda[F[_], A](lan: Lan[Id, F, A]): Coyoneda[F, A] =
+    Coyoneda.apply[F, lan.B, A](lan.run._2)(lan.run._1)
+
+  def fromCoyoneda[F[_], A](coyoneda: Coyoneda[F, A]): Lan[Id, F, A] =
+    new Lan[Id, F, A] {
+      type B = coyoneda.Pivot
+      def run = (coyoneda.k, coyoneda.fi)
+    }
+
 
   implicit def functorLan[F[_], G[_]]: Functor[Lan[F, G, ?]] =
     new Functor[Lan[F, G, ?]] {
