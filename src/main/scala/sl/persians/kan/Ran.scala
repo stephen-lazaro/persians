@@ -1,6 +1,7 @@
 package sl.persians.kan
 
-import cats.{~>, Functor}
+import cats.{~>, Functor, Monad}
+import cats.data.Kleisli
 import cats.effect.{IO, LiftIO}
 
 import sl.persians.Codensity
@@ -44,6 +45,10 @@ object Ran {
     new Ran[Either[E, ?], Option, A] {
       def run[B](given: A => Either[E, B]): Option[B] = given(a).toOption
     }
+
+  def withKleisli[F[_]: Monad, G[_], A, BB](a: A)(trans: F ~> G): Kleisli[F, A, BB] => G[BB] =
+    kleisli => Ran.transform[F, F, G, A](trans)(Ran.trivial[F, A](a)).run(kleisli.run)
+
 
   def trivial[F[_], A](a: A): Ran[F, F, A] =
     new Ran[F, F, A] {

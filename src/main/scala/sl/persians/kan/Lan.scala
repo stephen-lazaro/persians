@@ -22,7 +22,6 @@ object Lan {
 
   def fromLan [F[_], G[_], H[_], B] (trans: Lan[G, H, ?] ~> F)(hb: H[B]): F[G[B]] = trans.apply[G[B]](Lan.apply[G, H, B](hb))
 
-
   implicit def functorLan[F[_], G[_]]: Functor[Lan[F, G, ?]] =
     new Functor[Lan[F, G, ?]] {
       def map [A, C] (fa: Lan[F, G, A])(f: A => C): Lan[F, G, C] =

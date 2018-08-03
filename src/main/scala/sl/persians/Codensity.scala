@@ -47,16 +47,13 @@ object Codensity {
     codensity.run[A](Applicative[F].pure)
 
   // Todo: Monad => MonadFree HMMMMMMM
-  def improve[F[_]: Functor, M[_]: MonadFree, A](toImprove: M[A])(
-    implicit
-    monad: Monad[M[?]]
-    ): M[A] =
+  def improve[F[_]: Functor, M[_]: MonadFree: Monad, A](toImprove: M[A]): M[A] =
     lowerCodensity(new Codensity[M, A]{
+      // Is this the correct implementation?
       def run[B](g: A => M[B]) = Monad[M].flatMap(toImprove)(g)
     })
 
   trait MonadFree[M[_]] {}
-
   implicit def monadFreeForFree[F[_]: Functor] = new MonadFree[Free[F, ?]] {}
   implicit val monadFreeForIO = new MonadFree[IO] {}
 
