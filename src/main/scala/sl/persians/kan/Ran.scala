@@ -1,8 +1,9 @@
 package sl.persians.kan
 
-import cats.{~>, Functor, Monad}
+import cats.{~>, Functor, Id, Monad}
 import cats.data.Kleisli
 import cats.effect.{IO, LiftIO}
+import cats.free.Yoneda
 
 import sl.persians.Codensity
 
@@ -46,9 +47,18 @@ object Ran {
       def run[B](given: A => Either[E, B]): Option[B] = given(a).toOption
     }
 
+  def toYoneda[F[_], A](ran: Ran[Id, F, A]): Yoneda[F, A] =
+    new Yoneda[F, A] {
+      def apply[B](f: A => B): F[B] = ran.run(f)
+    }
+
+  def fromYoneda[F[_], A](yoneda: Yoneda[F, A]): Ran[Id, F, A] =
+    new Ran[Id, F, A] {
+      def run[B](f: A => B): F[B] = yoneda(f)
+    }
+
   def withKleisli[F[_]: Monad, G[_], A, BB](a: A)(trans: F ~> G): Kleisli[F, A, BB] => G[BB] =
     kleisli => Ran.transform[F, F, G, A](trans)(Ran.trivial[F, A](a)).run(kleisli.run)
-
 
   def trivial[F[_], A](a: A): Ran[F, F, A] =
     new Ran[F, F, A] {
