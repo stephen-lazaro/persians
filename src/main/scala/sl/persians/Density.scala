@@ -24,6 +24,12 @@ object Density {
       def run: (F[B] => A, F[B]) = density.run
     }
 
+  // Can this "improve" cofree comonads as lowerCodensity does free monads?
+  def lowerDensity[F[_]: Comonad, A](density: Density[F, A]): F[A] =
+    density.run match {
+      case (f, x) => Comonad[F].coflatMap(x)(f)
+    }
+
   implicit def comonadForDensity[F[_]]: Comonad[Density[F, ?]] = new ComonadForDensity[F] {}
 
   implicit def applyForDensity[F[_]: Apply]: Apply[Density[F, ?]] = new ApplyForDensity[F] {
