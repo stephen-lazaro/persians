@@ -7,7 +7,7 @@ import cats.instances.tuple.catsStdInstancesForTuple2
 import cats.instances.function.catsStdMonadForFunction1
 import cats.instances.function.catsStdRepresentableForFunction1
 import cats.instances.function.catsStdInstancesForFunction1
-import cats.syntax.arrowChoice.toArrowChoiceOps
+import cats.syntax.arrow.toArrowOps
 
 trait Adjunction[F[_], U[_]] {
   val F: Functor[F]
@@ -37,9 +37,9 @@ object Adjunction {
       }
     }
 
-  def adjuncted[F[_], U[_], P[_, _]: Profunctor, G[_]: Functor, A, B, C, D](
-    p: P[A => U[B], G[C => U[D]]]
-    )(
+  // Exchange either side of a profunctor by applying the adjunction
+  def adjoined[F[_], U[_], P[_, _]: Profunctor, G[_]: Functor, A, B, C, D](
+    p: P[A => U[B], G[C => U[D]]])(
     implicit
     _adjunction: Adjunction[F, U]
   ): P[F[A] => B, G[F[C] => D]] = Profunctor[P].dimap(p)(
@@ -58,15 +58,34 @@ object Adjunction {
     _adj: Adjunction[F, U]
   ): B = Adjunction[F, U].rightAdjoint[A, B](Function.const(ub)).apply(fa)
 
-  def cozipLeft[F[_], U[_], A, B](implicit
+  def cozipLeft[F[_], U[_], A, B](feither: F[Either[A, B]])(
+    implicit
     adjunction: Adjunction[F, U]
-  ): F[Either[A, B]] => Either[F[A], F[B]] =
+  ): Either[F[A], F[B]] =
     Adjunction[F, U].rightAdjoint(
        ArrowChoice[Function1].choice[A, B, U[Either[F[A], F[B]]]](
         Adjunction[F, U].leftAdjoint(Left.apply[F[A], F[B]]),
         Adjunction[F, U].leftAdjoint(Right.apply[F[A], F[B]])
       )
+    )(feither)
+
+  def uncozipLeft[F[_]: Functor, A, B](feither: Either[F[A], F[B]]): F[Either[A, B]] =
+    feither.fold[F[Either[A, B]]](
+      Functor[F].lift(Left.apply[A, B]),
+      Functor[F].lift(Right.apply[A, B])
     )
+
+  def zipRight[F[_], U[_], A, B](uab: (U[A], U[B]))(
+    implicit
+    adjunction: Adjunction[F, U]
+  ): U[(A, B)] =
+    Adjunction[F, U].leftAdjoint( // Need lift? How do?
+      Adjunction[F, U].rightAdjoint[(U[A], U[B]), A](_._1) &&&
+      Adjunction[F, U].rightAdjoint[(U[A], U[B]), B](_._2)
+    )(uab)
+
+  def unzipRight[F[_]: Functor, A, B]: F[(A, B)] => (F[A], F[B]) =
+    Functor[F].lift[(A, B), A](_._1) &&& Functor[F].lift[(A, B), B](_._2)
 
   implicit def adjunctionForId: Adjunction[Id, Id] =
     new Adjunction[Id, Id] {
@@ -75,7 +94,6 @@ object Adjunction {
       def unit[A](a: A): A = a
       def counit[A](fa: A): A = fa
     }
-
 
   implicit def representableForTuple2K[F[_]: Functor, G[_]: Functor]: Representable[Tuple2K[F, G, ?]] = ???
   implicit def adjunctionForTuple2KAndEither2K[F[_]: Functor, G[_]: Functor, H[_]: Functor, I[_]: Functor](
