@@ -1,6 +1,6 @@
 package sl.persians
 
-import cats.{Functor, Representable}
+import cats.{Functor, Id, Representable}
 import cats.arrow.Profunctor
 import cats.instances.tuple.catsStdInstancesForTuple2
 import cats.instances.function.catsStdMonadForFunction1
@@ -36,13 +36,29 @@ object Adjunction {
       }
     }
 
-    def adjuncted[F[_], U[_], P[_, _]: Profunctor, G[_]: Functor, A, B, C, D](
-      p: P[A => U[B], G[C => U[D]]]
-      )(
-      implicit
-      _adjunction: Adjunction[F, U]
-    ): P[F[A] => B, G[F[C] => D]] = Profunctor[P].dimap(p)(
-        Adjunction[F, U].leftAdjoint[A, B])(
-        Functor[G].lift(Adjunction[F, U].rightAdjoint[C, D])
-      )
+  def adjuncted[F[_], U[_], P[_, _]: Profunctor, G[_]: Functor, A, B, C, D](
+    p: P[A => U[B], G[C => U[D]]]
+    )(
+    implicit
+    _adjunction: Adjunction[F, U]
+  ): P[F[A] => B, G[F[C] => D]] = Profunctor[P].dimap(p)(
+      Adjunction[F, U].leftAdjoint[A, B])(
+      Functor[G].lift(Adjunction[F, U].rightAdjoint[C, D])
+    )
+
+  def tabulateAdjunction[F[_], U[_], B](fu: F[Unit] => B)(
+    implicit
+    _adj: Adjunction[F, U]
+  ): U[B] =
+    Adjunction[F, U].leftAdjoint(fu).apply(())
+
+
+  implicit def adjunctionForId: Adjunction[Id, Id] =
+    new Adjunction[Id, Id] {
+      val F = Functor[Id]
+      val U = Representable[Id]
+      def unit[A](a: A): A = a
+      def counit[A](fa: A): A = fa
+    }
+
 }
