@@ -59,6 +59,7 @@ object CoT {
           Comonad[W].extract(given)(a)
       }
 
+      // Tail recursive?
       def tailRecM[A, BB](a: A)(f: A => CoT[W, Id, Either[A, BB]]): Co[W, BB] =
         new CoT[W, Id, BB] {
           def run[B](given: W[BB => B]): B =
