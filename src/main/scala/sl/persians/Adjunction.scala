@@ -1,11 +1,13 @@
 package sl.persians
 
 import cats.{Functor, Id, Representable}
-import cats.arrow.Profunctor
+import cats.arrow.{ArrowChoice, Profunctor}
+import cats.data.{EitherK, Tuple2K}
 import cats.instances.tuple.catsStdInstancesForTuple2
 import cats.instances.function.catsStdMonadForFunction1
 import cats.instances.function.catsStdRepresentableForFunction1
-import cats.syntax.profunctor.toProfunctorOps
+import cats.instances.function.catsStdInstancesForFunction1
+import cats.syntax.arrowChoice.toArrowChoiceOps
 
 trait Adjunction[F[_], U[_]] {
   val F: Functor[F]
@@ -14,7 +16,6 @@ trait Adjunction[F[_], U[_]] {
 
   def unit[A](a: A): U[F[A]]
   def counit[A](a: F[U[A]]): A
-  // WTF?
   def leftAdjoint[A, B](f: F[A] => B): A => U[B] = (a: A) => U.F.map(unit(a))(f)
   def rightAdjoint[A, B](f: A => U[B]): F[A] => B = (fa: F[A]) => counit(F.map(fa)(f))
 }
@@ -52,6 +53,20 @@ object Adjunction {
   ): U[B] =
     Adjunction[F, U].leftAdjoint(fu).apply(())
 
+  def indexAdjunction[F[_], U[_], A, B](ub: U[B])(fa: F[A])(
+    implicit
+    _adj: Adjunction[F, U]
+  ): B = Adjunction[F, U].rightAdjoint[A, B](Function.const(ub)).apply(fa)
+
+  def cozipLeft[F[_], U[_], A, B](implicit
+    adjunction: Adjunction[F, U]
+  ): F[Either[A, B]] => Either[F[A], F[B]] =
+    Adjunction[F, U].rightAdjoint(
+       ArrowChoice[Function1].choice[A, B, U[Either[F[A], F[B]]]](
+        Adjunction[F, U].leftAdjoint(Left.apply[F[A], F[B]]),
+        Adjunction[F, U].leftAdjoint(Right.apply[F[A], F[B]])
+      )
+    )
 
   implicit def adjunctionForId: Adjunction[Id, Id] =
     new Adjunction[Id, Id] {
@@ -61,4 +76,17 @@ object Adjunction {
       def counit[A](fa: A): A = fa
     }
 
+
+  implicit def representableForTuple2K[F[_]: Functor, G[_]: Functor]: Representable[Tuple2K[F, G, ?]] = ???
+  implicit def adjunctionForTuple2KAndEither2K[F[_]: Functor, G[_]: Functor, H[_]: Functor, I[_]: Functor](
+    implicit
+    _adjA: Adjunction[F, H],
+    _adjB: Adjunction[G, I]
+  ): Adjunction[EitherK[F, H, ?], Tuple2K[G, I, ?]] =
+    new Adjunction[EitherK[F, H, ?], Tuple2K[G, I, ?]] {
+      val F = Functor[EitherK[F, H, ?]]
+      val U = Representable[Tuple2K[G, I, ?]]
+      def unit[B](b: B):  Tuple2K[G, I, EitherK[F, H, B]] = ???
+      def counit[B](fgb: EitherK[F, H, Tuple2K[G, I, B]]): B = ???
+    }
 }
