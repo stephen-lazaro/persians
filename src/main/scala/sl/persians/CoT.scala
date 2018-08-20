@@ -1,11 +1,27 @@
 package sl
 package persians
 
-import cats.{~>, Comonad, Functor, Id, Monad}
-import cats.data.Const
+import cats.{Apply, Comonad, Functor, Id, Monad, ~>}
+import cats.data.{Cokleisli, Const}
 
 trait CoT[W[_], M[_], A] {
   def run[B](given: W[A => M[B]]): M[B]
+}
+object Co {
+  def fromCokleisli[F[_]: Comonad, A, C](fa: F[A])(cof: Cokleisli[F, A, C]): Co[F, C] =
+    new CoT[F, Id, C] {
+      def run[B](given: F[C => B]): B =
+        Comonad[F].extract(Comonad[F].map(given)(f => f(cof.run(fa))))
+    }
+
+  def apply[F[_]: Comonad: Apply, A](fa: F[A]): Co[F, A] =
+    new CoT[F, Id, A] {
+      def run[B](given: F[A => B]): B =
+        Comonad[F].extract(Apply[F].ap(given)(fa))
+    }
+
+  def fromF[F[_]: Comonad, A, C](fa: F[A])(cof: F[A] => C): Co[F, C] =
+    Co.fromCokleisli(fa)(Cokleisli(cof))
 }
 object CoT {
   def liftComonadToCoT[W[_]: Comonad, M[_], S](trans: W ~> Const[S, ?]): CoT[W, M, S] =

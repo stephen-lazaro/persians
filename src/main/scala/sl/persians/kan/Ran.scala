@@ -1,26 +1,16 @@
 package sl.persians.kan
 
-import cats.{~>, Functor, Id, Monad}
+import cats.{Functor, Id, Monad, ~>}
 import cats.data.Kleisli
 import cats.effect.{IO, LiftIO}
 import cats.free.Yoneda
-
-import sl.persians.Codensity
+import sl.persians.{Adjunction, Codensity}
 
 import scala.concurrent.Future
 
 trait Ran [G [_], H [_], A] {
   def run[B](given: A => G [B]): H [B]
 }
-
-// If we had a FunctorK, a lot of the simple ones could
-// be written as trivial(a).mapK(whatever)
-// new FunctorK[Ran[G, ?, A]] {
-//   def contramapK[F[_], H[_](f: H ~> F)(ran: Ran[G, F, A]): Ran[G, H, A] ==
-//     new Ran[G, H, A] {
-//       def run[B](given: A => H[B]): H[B] = f.apply[B](ran.run(given))
-//     }
-// }
 object Ran {
   def toRan[F[_]: Functor, G[_], H[_], B](trans: λ[A => F [G [A]]] ~> H)(fb: F[B]): Ran[G, H, B] =
     new Ran [G, H, B] {
@@ -56,6 +46,18 @@ object Ran {
     new Ran[Id, F, A] {
       def run[B](f: A => B): F[B] = yoneda(f)
     }
+
+  def fromAdjunction[F[_], G[_], A](fa: F[A])(
+    implicit
+    adjunction: Adjunction[F, G]
+  ): Ran[G, Id, A] = new Ran[G, Id, A] {
+    def run[B](given: A => G[B]): B = Adjunction[F, G].rightAdjoint(given)(fa)
+  }
+
+  def toAdjunction[F[_], G[_], A](ran: Ran[G, Id, A])(
+    implicit
+    adjunction: Adjunction[F, G]
+  ): F[A] = ran.run((a: A) => Adjunction[F, G].unit(a))
 
   def withKleisli[F[_]: Monad, G[_], A, BB](a: A)(trans: F ~> G): Kleisli[F, A, BB] => G[BB] =
     kleisli => Ran.transform[F, F, G, A](trans)(Ran.trivial[F, A](a)).run(kleisli.run)

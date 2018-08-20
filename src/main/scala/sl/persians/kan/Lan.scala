@@ -1,9 +1,8 @@
 package sl.persians.kan
 
-import cats.{~>, Functor, Id}
+import cats.{Functor, Id, ~>}
 import cats.free.Coyoneda
-
-import sl.persians.Density
+import sl.persians.{Adjunction, Density}
 
 trait Lan [G [_], H [_], A] {
   type B
@@ -18,9 +17,24 @@ object Lan {
         Functor[F].map(trans.apply[lgh.B](v))(f)
     }
 
+  def fromAdjunction[F[_], G[_], A](ga: G[A])(
+    implicit
+    adjunction: Adjunction[F, G]
+  ): Lan[F, Id, A] = new Lan[F, Id, A] {
+    type B = G[A]
+    def run: (F[B] => A, B) = (adjunction.counit[A], ga)
+  }
+
+  def toAdjunction[F[_], G[_], A](lan: Lan[F, Id, A])(
+    implicit
+    adjunction: Adjunction[F, G]
+  ): G[A] = lan.run match {
+    case (f, v) => Adjunction[F, G].leftAdjoint(f)(v)
+  }
+
   def apply [G [_], H [_], A] (ha: H[A]): Lan[G, H, G[A]] = new Lan[G, H, G[A]] {
     type B = A
-    def run: (G[this.B] => G[A], H[this.B]) = (identity[G[A]], ha)
+    def run: (G[B] => G[A], H[B]) = (identity[G[A]], ha)
   }
 
   def fromLan [F[_], G[_], H[_], B] (trans: Lan[G, H, ?] ~> F)(hb: H[B]): F[G[B]] = trans.apply[G[B]](Lan.apply[G, H, B](hb))

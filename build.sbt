@@ -5,11 +5,11 @@ version := "1.0"
 scalaVersion := "2.12.5"
 
 scalacOptions ++= Seq (
-  "-Xfatal-warnings",
+  //"-Xfatal-warnings",
   "-Xfuture",
   "-Xlint",
   "-Ypartial-unification",
-  "-Ywarn-unused-import",
+  //"-Ywarn-unused-import",
   "-deprecation",
   "-encoding", "UTF-8",
   "-feature",
@@ -26,4 +26,5 @@ libraryDependencies ++= Seq (
   "org.typelevel" %% "cats-core" % "1.2.0",
   "org.typelevel" %% "cats-effect" % "1.0.0-RC2",
   "org.typelevel" %% "cats-free" % "1.2.0"
+  //"org.typelevel" %% "cats-tagless" % "0.1.0"
 )
