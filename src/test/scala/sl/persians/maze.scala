@@ -1,25 +1,17 @@
 package sl.persians
 
-import cats.{Id, Monad, MonoidK}
-import cats.data.Cokleisli
 import cats.free.Cofree
+import cats.instances.function.catsStdMonadForFunction1
 import cats.instances.list.catsStdInstancesForList
 import cats.instances.set.catsStdInstancesForSet
-import cats.instances.tuple.catsStdInstancesForTuple2
-import cats.syntax.flatMap.toFlatMapOps
-import cats.syntax.functor.toFunctorOps
 import cats.syntax.foldable.toFoldableOps
+import cats.{Id, Monad, MonoidK}
 import sl.persians.CoT.monadFromComonad
 
 import scala.util.Random
 
-object example {
+object maze {
   case class Position(x: Int, y: Int)
-
-  type BranchPoint[A] = (Set[Direction], A)
-  type Maze[A] = Cofree[BranchPoint, A]
-  type Navigation[A] = Co[Maze, A]
-
   sealed trait Direction
   case object North extends Direction
   case object East extends Direction
@@ -40,8 +32,14 @@ object example {
         .foldMap(_.toSet[Direction])(MonoidK[Set].algebra[Direction])
   }
 
-  def firstStep: Cokleisli[Maze, Position, Position] =
-    Cokleisli[Maze, Position, Position]((m: Maze[Position]) => m.head)
+  // Every node takes a direction and returns an A
+  type BranchPoint[A] = Direction => A
+  // Maze is a tree of transitions from nodes along directions
+  type Maze[A] = Cofree[BranchPoint, A] // Fix[(A, BranchPoint[A])]
+  // Right associate the extensions
+  type CleanMaze[A] = Density[Maze, A]
+  // The Monad obtained from selecting in Maze
+  type Navigation[A] = Co[Maze, A]
 
   def step(whereYouAre: Position, direction: String): Position =
     (whereYouAre, direction) match {
@@ -51,39 +49,43 @@ object example {
       case (Position(x, y), "West") => Position(x - 1, y)
     }
 
+  // Kleisli[Navigation, Position, Position]
   def takeStep(whereYouAre: Position, set: Set[Direction] = Set.empty[Direction]): Navigation[Position] = {
     val dirsOpen = (if (set.isEmpty) Direction.openFromHere() else set).map(_.toString)
-    println(s"You can go: ${dirsOpen}")
+    println(s"You can go in any of: $dirsOpen")
     scala.io.StdIn.readLine ("Where do you want to go?\n") match {
       case dir =>
         if (dirsOpen(dir))
           new CoT[Maze, Id, Position] {
             def run[B] (given: Maze[(Position) => B]): B =
-              given.map(f => f (step (whereYouAre, dir))).head
+              given.map(f => f(step(whereYouAre, dir))).head
           }
         else {
           println("No good. That way is closed.")
-          takeStep(whereYouAre)
+          takeStep(whereYouAre, set)
         }
     }
   }
 
   def theMaze: Maze[Position] =
-    Cofree.unfold[BranchPoint, Position](Position(0, 0))(p => {
-      val direction = Direction.random()
-      println(direction)
-      (direction.toSet, step(p, direction.toString))
-    })
+    Cofree.unfold[BranchPoint, Position](Position(0, 0))(p =>
+      (d: Direction) => step(p, d.toString)
+    )
 
-  def navigateOnce(maze: Navigation[Position]): Navigation[Position] =
-    for {
-      place <- maze
-      navigation <- takeStep(place)
-    } yield navigation
-
-  def keepNavigating(maze: Maze[Position]): Navigation[Position] =
-    Monad[Navigation].iterateWhileM(maze.head)(p => takeStep(p))({case Position(x, y) => Math.sqrt(x*x + y*y) < 10})
+  def keepNavigating(radius: Double)(maze: Maze[Position]): Navigation[Position] =
+    // Bound the monadic recursion by declaring the Maze of finite radius
+    // `Co` not currently stack safe...
+    Monad[Navigation].iterateWhileM(maze.head)(takeStep(_, Set.empty[Direction]))({
+        case Position(x, y) => Math.sqrt(x*x + y*y) < radius
+      })
 
   def runMaze(): Position =
-    keepNavigating(theMaze).run(Cofree.unfold(identity[Position] _)(f => (Set.empty[Direction], f)))
+    keepNavigating(10)(theMaze).run(
+      // Construct a tree of ways to transition the node at that point in the value tree.
+      // Given a transition, takes a step in the requested direction and then applies it.
+      Cofree.unfold(identity[Position] _)(
+        (transition: Position => Position) =>
+          (direction: Direction) =>
+            (point: Position) =>
+              transition(step(point, direction.toString))))
 }
