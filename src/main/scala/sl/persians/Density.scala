@@ -1,21 +1,32 @@
 package sl.persians
 
+import cats.free.Cofree
 import cats.{Applicative, Apply, Comonad, Functor}
 import cats.instances.function.catsStdInstancesForFunction1
 import cats.syntax.arrow.toArrowOps
 import cats.syntax.profunctor.toProfunctorOps
-
 import sl.persians.kan.Lan
 
 trait Density[K[_], A] {
   type B
   def run: (K[B] => A, K[B])
+  def fi: K[B] = run._2
+  def k: K[B] => A = run._1
 }
 object Density {
   def liftToDensity[F[_]: Comonad, A](fa: F[A]): Density[F, A] =
     new Density[F, A] {
       type B = A
       def run: (F[B] => A, F[B]) = (Comonad[F].extract, fa)
+    }
+
+  def withCofree[F[_]: Functor, A](a: A)(f: A => F[A]): Density[Cofree[F, ?], A] =
+    new Density[Cofree[F, ?], A] {
+      type B = A
+      def run: (Cofree[F, B] => A, Cofree[F, A]) = (
+        (c: Cofree[F, B]) => c.head,
+        Cofree.unfold(a)(f)
+      )
     }
 
   def toLan[F[_], A](density: Density[F, A]): Lan[F, F, A] =
