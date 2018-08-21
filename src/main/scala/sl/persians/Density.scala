@@ -15,6 +15,7 @@ trait Density[K[_], A] {
   def k: K[B] => A = run._1
 }
 object Density {
+  type Aux[G[_], A, B0] = Density[G, A] { type B = B0 }
   def liftToDensity[F[_]: Comonad, A](fa: F[A]): Density[F, A] =
     new Density[F, A] {
       type B = A
@@ -25,7 +26,7 @@ object Density {
     new Density[Cofree[F, ?], A] {
       type B = A
       def run: (Cofree[F, B] => A, Cofree[F, A]) = (
-        (c: Cofree[F, B]) => c.head,
+        Comonad[Cofree[F, ?]].extract[B],
         Cofree.unfold(a)(f)
       )
     }

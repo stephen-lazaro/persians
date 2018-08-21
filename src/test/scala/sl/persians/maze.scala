@@ -36,10 +36,8 @@ object maze {
   type BranchPoint[A] = Direction => A
   // Maze is a tree of transitions from nodes along directions
   type Maze[A] = Cofree[BranchPoint, A] // Fix[(A, BranchPoint[A])]
-  // Re-associate the extensions
-  type CleanMaze[A] = Density[Maze, A]
-  // The Monad obtained from selecting in Maze
-  type Navigation[A] = Co[CleanMaze, A]
+  // The Monad obtained from selecting in CleanMaze
+  type Navigation[A] = Co[Maze, A]
 
   def step(whereYouAre: Position, direction: String): Position =
     (whereYouAre, direction) match {
@@ -56,9 +54,9 @@ object maze {
     scala.io.StdIn.readLine ("Where do you want to go?\n") match {
       case dir =>
         if (dirsOpen(dir))
-          new CoT[CleanMaze, Id, Position] {
-            def run[B] (given: CleanMaze[Position => B]): B =
-              given.fi.map((f: Position => B) => f(step(whereYouAre, dir))).head
+          new CoT[Maze, Id, Position] {
+            def run[BB](given: Maze[Position => BB]): BB =
+              given.map((f: Position => BB) => f(step(whereYouAre, dir))).head
           }
         else {
           println("No good. That way is closed.")
@@ -68,15 +66,15 @@ object maze {
     }
   }
 
-  def theMaze: CleanMaze[Position] =
-    Density.withCofree[BranchPoint, Position](Position(0, 0))((p: Position) =>
+  def theMaze: Maze[Position] =
+    Cofree.unfold[BranchPoint, Position](Position(0, 0))((p: Position) =>
       (d: Direction) => step(p, d.toString)
     )
 
-  def keepNavigating(radius: Double)(maze: CleanMaze[Position]): Navigation[Position] =
+  def keepNavigating(radius: Double)(maze: Maze[Position]): Navigation[Position] =
     // Bound the monadic recursion by declaring the Maze of finite radius
     // `Co` not currently stack safe...
-    Monad[Navigation].iterateWhileM(maze.fi.head)(takeStep(_, Set.empty[Direction]))({
+    Monad[Navigation].iterateWhileM(maze.head)(takeStep(_, Set.empty[Direction]))({
         case Position(x, y) => Math.sqrt(x*x + y*y) < radius
       })
 
@@ -84,9 +82,8 @@ object maze {
     keepNavigating(10)(theMaze).run(
       // Construct a tree of ways to transition the node at that point in the value tree.
       // Given a transition, takes a step in the requested direction and then applies it.
-      Density.withCofree[BranchPoint, Endo[Position]](identity[Position]
-      )(
-        (transition: Position => Position) =>
+      Cofree.unfold[BranchPoint, Endo[Position]](identity[Position]
+      )((transition: Position => Position) =>
           (direction: Direction) =>
             (point: Position) =>
               transition(step(point, direction.toString))))

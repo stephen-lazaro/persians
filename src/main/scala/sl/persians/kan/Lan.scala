@@ -11,6 +11,7 @@ trait Lan [G [_], H [_], A] {
   def k: G[B] => A = run._1
 }
 object Lan {
+  type Aux[G[_], H[_], A, B0] = Lan[G, H, A] { type B = B0 }
   def toLan [F [_]: Functor, H [_], G [_], B] (trans: H ~> λ[A => F [G [A]]])(lgh: Lan[G, H, B]): F[B] =
     lgh.run match {
       case (f, v) =>
