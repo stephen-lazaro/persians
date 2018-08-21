@@ -7,6 +7,7 @@ import cats.syntax.arrow.toArrowOps
 import cats.syntax.profunctor.toProfunctorOps
 import sl.persians.kan.Lan
 
+// Ugh, need to use the Aux pattern for this to be at all usable...
 trait Density[K[_], A] {
   type B
   def run: (K[B] => A, K[B])
