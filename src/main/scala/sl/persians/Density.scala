@@ -7,7 +7,18 @@ import cats.syntax.arrow.toArrowOps
 import cats.syntax.profunctor.toProfunctorOps
 import sl.persians.kan.Lan
 
-// Ugh, need to use the Aux pattern for this to be at all usable...
+
+trait DensityT[F[_], W[_], A] {
+  type R
+  def run: (W[F[R] => A], F[R])
+  def fi: F[R] = run._2
+  def k: W[F[R] => A]
+}
+object DensityT {
+  type Aux[F[_], W[_], A, R0] = DensityT[F, W, A] { type R = R0 }
+
+  // ComonadTrans?
+}
 trait Density[K[_], A] {
   type B
   def run: (K[B] => A, K[B])

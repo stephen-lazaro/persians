@@ -82,8 +82,8 @@ object maze {
     keepNavigating(10)(theMaze).run(
       // Construct a tree of ways to transition the node at that point in the value tree.
       // Given a transition, takes a step in the requested direction and then applies it.
-      Cofree.unfold[BranchPoint, Endo[Position]](identity[Position]
-      )((transition: Position => Position) =>
+      Cofree.unfold[BranchPoint, Endo[Position]](identity[Position])(
+        (transition: Position => Position) =>
           (direction: Direction) =>
             (point: Position) =>
               transition(step(point, direction.toString))))
