@@ -11,8 +11,6 @@ import cats.instances.function.catsStdInstancesForFunction1
 import cats.syntax.arrow.toArrowOps
 import cats.syntax.functor.toFunctorOps
 
-import scala.annotation.tailrec
-
 trait Adjunction[F[_], U[_]] {
   val F: Functor[F]
   val U: Representable[U]
@@ -74,12 +72,6 @@ object Adjunction {
       )
     )(feither)
 
-  def uncozipLeft[F[_]: Functor, A, B](feither: Either[F[A], F[B]]): F[Either[A, B]] =
-    feither.fold[F[Either[A, B]]](
-      Functor[F].lift(Left.apply[A, B]),
-      Functor[F].lift(Right.apply[A, B])
-    )
-
   def zipRight[F[_], U[_], A, B](uab: (U[A], U[B]))(
     implicit
     adjunction: Adjunction[F, U]
@@ -88,9 +80,6 @@ object Adjunction {
       Adjunction[F, U].rightAdjoint[(U[A], U[B]), A](_._1) &&&
       Adjunction[F, U].rightAdjoint[(U[A], U[B]), B](_._2)
     )(uab)
-
-  def unzipRight[F[_]: Functor, A, B]: F[(A, B)] => (F[A], F[B]) =
-    Functor[F].lift[(A, B), A](_._1) &&& Functor[F].lift[(A, B), B](_._2)
 
   def wrapWithAdjunction[F[_], U[_], A, B, C](f: A => B => C)(
     implicit
@@ -125,9 +114,6 @@ object Adjunction {
         (a, Adjunction[F, U].F.void(inner))
       )(a)
     )(fa)
-
-  def unsplitLeft[F[_]: Functor, A](a: A)(funit: F[Unit]): F[A] =
-    Functor[F].as(funit, a)
 
   implicit def adjunctionForId: Adjunction[Id, Id] =
     new Adjunction[Id, Id] {

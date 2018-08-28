@@ -36,7 +36,7 @@ object maze {
   type BranchPoint[A] = Direction => A
   // Maze is a tree of transitions from nodes along directions
   type Maze[A] = Cofree[BranchPoint, A] // Fix[(A, BranchPoint[A])]
-  // The Monad obtained from selecting in CleanMaze
+  // The Monad obtained from selecting in Maze
   type Navigation[A] = Co[Maze, A]
 
   def step(whereYouAre: Position, direction: String): Position =
@@ -45,6 +45,7 @@ object maze {
       case (Position(x, y), "South") => Position(x, y - 1)
       case (Position(x, y), "East") => Position(x + 1, y)
       case (Position(x, y), "West") => Position(x - 1, y)
+      case _ => throw new Error("no good")
     }
 
   // Kleisli[Navigation, Position, Position]
