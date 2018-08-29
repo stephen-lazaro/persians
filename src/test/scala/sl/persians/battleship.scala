@@ -108,6 +108,12 @@ object battleship {
     )
   }
 
+  /**
+    * Adjunction between the Coord functor and the
+    * Board functor.
+    * This allows us to specify ways to build boards
+    * entirely in terms of how to handle cells.
+    */
   implicit def adjunctionBoard = new Adjunction[Coord, BoardF] {
     val F: Functor[Coord] = Functor[Coord]
     val U: Representable.Aux[BoardF, Coord[Unit]] = representableBoard
@@ -122,7 +128,8 @@ object battleship {
   }
 
   /**
-    * Zip a board with the indices of it's values
+    * Zip a board with the indices of it's values using the
+    * adjunction specified above.
     */
   def contextualize[A](board: BoardF[A]): BoardF[Coord[A]] =
     Functor[BoardF].map(
@@ -145,11 +152,17 @@ object battleship {
         case CoordF(_, Shot) => AlreadyTaken
       }
 
+  /**
+    * Attack a cell and get a result using the adjunction.
+    */
   def resultForIndex(index: Indice): BoardF[Coord[Status]] => Coord[Unit] => Result =
     Adjunction.wrapWithAdjunction[Coord, BoardF, Coord[Status], Unit, Result](
       processAttackAt(index)
     )
 
+  /**
+    * Produce a new board describing the state of the game.
+    */
   def updateBoard(board: BoardF[Coord[Status]])(index: Indice): BoardF[Status] =
     Functor[BoardF].map(board)({
       case CoordF(given, status) =>
@@ -157,12 +170,18 @@ object battleship {
         else status
     })
 
+  /**
+    * Get new result and the new state of the board
+    */
   def attack(board: BoardF[Status], index: Indice): (Result, BoardF[Status]) =
     (
       resultForIndex(index)(contextualize(board))(asCoord(index)),
       updateBoard(contextualize(board))(index)
     )
 
+  /**
+    * We want to take the newest result, which is the left result.
+    */
   implicit val monoidResult: Monoid[Result] = new Monoid[Result] {
     def empty: Result = Start
     def combine(x: Result, y: Result) = {
@@ -171,20 +190,33 @@ object battleship {
     }
   }
 
-  def getIndex: Indice = (
-    Row.ofString(io.StdIn.readLine("Gimme a Row:, i, ii, iii\n")),
-    Column.ofString(io.StdIn.readLine("Gimme a Column: a, b, c\n"))
-  )
+  /**
+    * Some crappy IO
+    */
+  def getIndex: Indice =
+    (
+      Row.ofString(io.StdIn.readLine("Gimme a Row:, i, ii, iii\n")),
+      Column.ofString(io.StdIn.readLine("Gimme a Column: a, b, c\n"))
+    )
 
-  def gameContinues: BoardF[Status] => Boolean = board => Functor[BoardF].map(board)(_ != Ship) match {
+  /**
+    * Predicate that determines game continuance.
+    */
+  def gameEnds: BoardF[Status] => Boolean = board => Functor[BoardF].map(board)(_ != Ship) match {
     case (
       (true, true, true),
       (true, true, true),
       (true, true, true)
-    ) => false
-    case _ => true
+    ) => true
+    case _ => false
   }
 
+  /**
+    * Iterate turns until the game ends in a tail recursive loop.
+    */
   def runGame(board: BoardF[Status]): (Result, BoardF[Status]) =
-    Monad[(Result, ?)].iterateWhileM[BoardF[Status]](board)((lboard: BoardF[Status]) => attack(lboard, getIndex))(gameContinues)
+    Monad[(Result, ?)].iterateUntilM[BoardF[Status]](board)(
+      (lboard: BoardF[Status]) => attack(lboard, getIndex))(
+      gameEnds
+    )
 }
