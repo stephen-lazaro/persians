@@ -11,6 +11,10 @@ import cats.instances.function.catsStdInstancesForFunction1
 import cats.syntax.arrow.toArrowOps
 import cats.syntax.functor.toFunctorOps
 
+/**
+  * Based on:
+  * http://hackage.haskell.org/package/adjunctions
+  */
 trait Adjunction[F[_], U[_]] {
   val F: Functor[F]
   val U: Representable[U]

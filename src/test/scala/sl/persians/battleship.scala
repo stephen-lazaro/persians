@@ -85,7 +85,7 @@ object battleship {
     * The Representation type is Coord[Unit] ~ Indice
     */
   implicit def representableBoard = new Representable[BoardF] {
-    def F = functorForBoardF
+    def F = Functor[BoardF]
 
     type Representation = Coord[Unit]
 
@@ -137,9 +137,15 @@ object battleship {
       case (index, data) => CoordF(index, data)
     })
 
+  /**
+    * Grab value at an index.
+    */
   def atIndex[A](index: Indice)(board: BoardF[A]): A =
     Adjunction[Coord, BoardF].counit(CoordF(index, board))
 
+  /**
+    * Determine result based on prior status and index in question.
+    */
   def processAttackAt(index: Indice)(coord: Coord[Status]): Unit => Result =
     _ =>
       coord match {
