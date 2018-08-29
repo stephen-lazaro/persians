@@ -14,7 +14,7 @@ import cats.syntax.functor.toFunctorOps
 trait Adjunction[F[_], U[_]] {
   val F: Functor[F]
   val U: Representable[U]
-  val UF: Functor[U] = U.F
+  def UF: Functor[U] = U.F
   type Repr = U.Representation
 
   def unit[A](a: A): U[F[A]]

@@ -85,7 +85,7 @@ object battleship {
     * The Representation type is Coord[Unit] ~ Indice
     */
   implicit def representableBoard = new Representable[BoardF] {
-    def F = Functor[BoardF]
+    def F = functorForBoardF
 
     type Representation = Coord[Unit]
 
@@ -121,6 +121,9 @@ object battleship {
       U.index(a.data)(asCoord(a.coords))
   }
 
+  /**
+    * Zip a board with the indices of it's values
+    */
   def contextualize[A](board: BoardF[A]): BoardF[Coord[A]] =
     Functor[BoardF].map(
       Adjunction.zipRight[Coord, BoardF, Indice, A]((indiceBoard, board)))({
@@ -142,7 +145,7 @@ object battleship {
         case CoordF(_, Shot) => AlreadyTaken
       }
 
-  def resultForIndex(index: Indice): BoardF[Coord[Status]] => CoordF[Indice, Unit] => Result =
+  def resultForIndex(index: Indice): BoardF[Coord[Status]] => Coord[Unit] => Result =
     Adjunction.wrapWithAdjunction[Coord, BoardF, Coord[Status], Unit, Result](
       processAttackAt(index)
     )
@@ -163,25 +166,25 @@ object battleship {
   implicit val monoidResult: Monoid[Result] = new Monoid[Result] {
     def empty: Result = Start
     def combine(x: Result, y: Result) = {
-      println(s"Outcome: $y")
-      y
+      println(s"Outcome: $x")
+      x
     }
   }
 
   def getIndex: Indice = (
-    Row.ofString(io.StdIn.readLine("Gimme a Row")),
-    Column.ofString(io.StdIn.readLine("Gimme a column"))
+    Row.ofString(io.StdIn.readLine("Gimme a Row:, i, ii, iii\n")),
+    Column.ofString(io.StdIn.readLine("Gimme a Column: a, b, c\n"))
   )
 
-  def isWon: BoardF[Status] => Boolean = board => Functor[BoardF].map(board)(_ != Ship) match {
+  def gameContinues: BoardF[Status] => Boolean = board => Functor[BoardF].map(board)(_ != Ship) match {
     case (
       (true, true, true),
       (true, true, true),
       (true, true, true)
-    ) => true
-    case _ => false
+    ) => false
+    case _ => true
   }
 
   def runGame(board: BoardF[Status]): (Result, BoardF[Status]) =
-    Monad[(Result, ?)].iterateWhileM[BoardF[Status]](board)(board => attack(board, getIndex))(isWon)
+    Monad[(Result, ?)].iterateWhileM[BoardF[Status]](board)((lboard: BoardF[Status]) => attack(lboard, getIndex))(gameContinues)
 }
