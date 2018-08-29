@@ -6,6 +6,7 @@ import cats.syntax.arrow.toArrowOps
 
 package object persians {
   type Co[W[_], A] = CoT[W, Id, A]
+  type SelfDual[F[_]] = Dual[F, F]
 
   def uncozipLeft[F[_]: Functor, A, B](feither: Either[F[A], F[B]]): F[Either[A, B]] =
     feither.fold[F[Either[A, B]]](

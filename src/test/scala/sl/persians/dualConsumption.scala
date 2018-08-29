@@ -18,7 +18,8 @@ object dualConsumption {
   def indexAt[A, B](nat: Nat[A])(stream: Stream[B]): (A, B) =
     consume((Tuple2.apply[A, B] _).curried)(nat)(stream)
 
-  implicit val unsafeSelfDualForList: Dual[List, List] = new Dual[List, List] {
+  // Just used as expository instance...
+  implicit val unsafeSelfDualForList: SelfDual[List] = new SelfDual[List] {
     def zap[A, B, C](f: A => B => C)(fa: List[A])(g: List[B]): C =
       fa.zip(g).map(Function.uncurried(f).tupled).head
   }
@@ -30,8 +31,8 @@ object dualConsumption {
     consume((Tuple2.apply[A, B] _).curried)(path)(tree)
 
   type Transitions[C, A] = Free[C => ?, A]
-  type MooreMachine[C, A] = Cofree[(C, ?), A]
+  type ContextStream[C, A] = Cofree[(C, ?), A]
 
-  def throughTransitions[A, B, C](transitions: Transitions[C, A])(machine: MooreMachine[C, B]): (A, B) =
-    consume((Tuple2.apply[A, B] _).curried)(transitions)(machine)
+  def throughTransitions[A, B, C](transitions: Transitions[C, A])(context: ContextStream[C, B]): (A, B) =
+    consume((Tuple2.apply[A, B] _).curried)(transitions)(context)
 }
