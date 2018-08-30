@@ -162,7 +162,7 @@ object battleship {
     * Attack a cell and get a result using the adjunction.
     */
   def resultForIndex(index: Indice): BoardF[Coord[Status]] => Coord[Unit] => Result =
-    Adjunction.wrapWithAdjunction[Coord, BoardF, Coord[Status], Unit, Result](
+    Adjunction.zapWithAdjunction[Coord, BoardF, Coord[Status], Unit, Result](
       processAttackAt(index)
     )
 
@@ -208,14 +208,15 @@ object battleship {
   /**
     * Predicate that determines game continuance.
     */
-  def gameEnds: BoardF[Status] => Boolean = board => Functor[BoardF].map(board)(_ != Ship) match {
-    case (
-      (true, true, true),
-      (true, true, true),
-      (true, true, true)
-    ) => true
-    case _ => false
-  }
+  def gameEnds: BoardF[Status] => Boolean =
+    Functor[BoardF].lift[Status, Boolean](_ != Ship) andThen {
+      case (
+        (true, true, true),
+        (true, true, true),
+        (true, true, true)
+      ) => true
+      case _ => false
+    }
 
   /**
     * Iterate turns until the game ends in a tail recursive loop.

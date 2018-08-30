@@ -85,7 +85,7 @@ object Adjunction {
       Adjunction[F, U].rightAdjoint[(U[A], U[B]), B](_._2)
     )(uab)
 
-  def wrapWithAdjunction[F[_], U[_], A, B, C](f: A => B => C)(
+  def zapWithAdjunction[F[_], U[_], A, B, C](f: A => B => C)(
     implicit
     adj: Adjunction[F, U]
   ): U[A] => F[B] => C = {
