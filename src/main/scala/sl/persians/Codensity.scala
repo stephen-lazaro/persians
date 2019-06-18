@@ -35,9 +35,9 @@ object Codensity {
       codensity.run(Bracket[M, E].pure))(
       Function.const(Bracket[M, E].unit))
 
-  def fromResource[A, E, M[_]](ma: Resource[M, A])(
+  def fromResource[A, M[_]](ma: Resource[M, A])(
     implicit
-    _bracket: Bracket[M ,E]
+    _bracket: Bracket[M, Throwable]
     ): Codensity[M, A] =
     new Codensity[M, A] {
       def run[B](f: A => M[B]): M[B] = ma.use(f)
