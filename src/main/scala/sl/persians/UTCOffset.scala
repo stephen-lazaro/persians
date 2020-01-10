@@ -14,7 +14,7 @@ object UTCOffset {
 
   val UTC = UTCOffset(refineMV[Domain](0))
 
-  implicit val affineSpace: AffineSpace[UTCOffset, Int] = new AffineSpace[UTCOffset, Int] {
+  implicit val displace: Displace[UTCOffset, Int] = new Displace[UTCOffset, Int] {
     override implicit def displacements: CModule[UTCOffset, Int] = new CModule[UTCOffset, Int] {
       override implicit def scalar: CRing[Int] = CRing[Int]
 

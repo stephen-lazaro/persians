@@ -14,6 +14,9 @@ object ZModulo {
   def fromRefined[Upper](r: Int Refined Domain[Upper]): ZModulo[Upper] =
     new ZModulo[Upper](r.value)
 
+  def toRefined[Upper](z: ZModulo[Upper]): Int Refined Domain[Upper] =
+    Refined.unsafeApply(z.value)
+
   def unapply[Upper](arg: ZModulo[Upper]): Option[Int] = Some(arg.value)
 
   implicit def module[Upper <: Int](
@@ -72,7 +75,7 @@ object ZModulo {
           new ZModulo[Upper](
             x match {
               case ZModulo(value) =>
-                (24 - value) % widen(witness.value)
+                (widen(witness.value) - value) % widen(witness.value)
             }
           )
 

@@ -32,5 +32,6 @@ libraryDependencies ++= Seq (
   "org.typelevel" %% "cats-tagless-macros" % "0.6",
   "com.github.to-ithaca" %% "libra" % "0.5.0",
   "org.typelevel" %% "spire" % "0.17.0-M1",
-  "eu.timepit" %% "refined" % "0.9.5"
+  "eu.timepit" %% "refined" % "0.9.5",
+  "io.frees" %% "iota-core" % "0.3.10"
 )
