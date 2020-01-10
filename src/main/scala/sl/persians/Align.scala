@@ -11,7 +11,7 @@ trait Align[F[_]] extends Functor[F] {
     map(align(fa, fb))(f)
 
   // Could be done with option monoid syntax lifting the semigroup
-  def salign[A: Semigroup](fa: F[A], faa: F[A]): F[A] =
+  def combineAlign[A: Semigroup](fa: F[A], faa: F[A]): F[A] =
     alignWith(fa, faa)({
       case Ior.Right(b) => b
       case Ior.Left(a)  => a
@@ -57,5 +57,17 @@ object Align {
 
       go(fa, fb)
     }
+  }
+
+  implicit val alignForOption: Align[Option] = new Align[Option] {
+    def nil[A]: Option[A] = None
+
+    def align[A, B](fa: Option[A], fb: Option[B]): Option[Ior[A, B]] =
+      (fa, fb) match {
+        case (None, None)       => None
+        case (Some(a), None)    => Option(Ior.Left(a))
+        case (None, Some(b))    => Option(Ior.Right(b))
+        case (Some(a), Some(b)) => Option(Ior.Both(a, b))
+      }
   }
 }
